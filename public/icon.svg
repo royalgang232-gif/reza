@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="arcGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="25%" stop-color="#00f0ff"/>
+      <stop offset="60%" stop-color="#0284c7" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#04070d" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Background Disc -->
+  <rect width="512" height="512" rx="100" fill="#04070d"/>
+  
+  <!-- Outer Segmented Ring -->
+  <circle cx="256" cy="256" r="210" stroke="#00f0ff" stroke-width="4" fill="none" opacity="0.3" stroke-dasharray="16 8"/>
+  <circle cx="256" cy="256" r="190" stroke="#0284c7" stroke-width="8" fill="none" opacity="0.7"/>
+  
+  <!-- Segments -->
+  <g stroke="#00f0ff" stroke-width="10" stroke-linecap="round" filter="url(#glow)">
+    <line x1="256" y1="46" x2="256" y2="86" />
+    <line x1="256" y1="426" x2="256" y2="466" />
+    <line x1="46" y1="256" x2="86" y2="256" />
+    <line x1="426" y1="256" x2="466" y2="256" />
+    <line x1="108" y1="108" x2="136" y2="136" />
+    <line x1="376" y1="376" x2="404" y2="404" />
+    <line x1="108" y1="404" x2="136" y2="376" />
+    <line x1="376" y1="136" x2="404" y2="108" />
+  </g>
+
+  <!-- Inner Ring & Core -->
+  <circle cx="256" cy="256" r="140" stroke="#00f0ff" stroke-width="6" fill="#060c18"/>
+  <circle cx="256" cy="256" r="110" stroke="#38bdf8" stroke-width="3" stroke-dasharray="8 6" fill="none"/>
+  
+  <!-- Glowing Arc Center -->
+  <circle cx="256" cy="256" r="75" fill="url(#arcGlow)" filter="url(#glow)"/>
+  <polygon points="256,196 308,286 204,286" stroke="#00f0ff" stroke-width="6" fill="none" filter="url(#glow)"/>
+</svg>

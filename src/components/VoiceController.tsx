@@ -34,12 +34,13 @@ export const VoiceController: React.FC<VoiceControllerProps> = ({
   };
 
   const suggestions = [
+    "Search anything on internet",
     "Weather in Kathmandu",
     "Tell a joke in Nepali",
     "Reza, write this",
     "Run system diagnostics",
     "Open calculator",
-    "Search quantum computing"
+    "Enable background assistance"
   ];
 
   return (

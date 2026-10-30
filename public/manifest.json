@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "REZA — JARVIS AI Assistant",
+  "short_name": "REZA AI",
+  "description": "Futuristic desktop & mobile AI assistant inspired by JARVIS with real-time background assistance, multilingual voice, system telemetry, and internet search.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#04070d",
+  "background_color": "#04070d",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

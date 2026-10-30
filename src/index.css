@@ -33,8 +33,8 @@
   background: rgba(6, 182, 212, 0.6);
 }
 
-/* Futuristic Scanline Effect */
-.scanlines {
+/* Futuristic Scanline Overlay */
+.scanlines-overlay {
   background: linear-gradient(
     rgba(18, 16, 16, 0) 50%, 
     rgba(0, 0, 0, 0.25) 50%
@@ -42,10 +42,10 @@
     90deg,
     rgba(255, 0, 0, 0.02),
     rgba(0, 255, 0, 0.01),
-    rgba(0, 0, 255, 0.02)
+    rgba(0, 255, 0, 0.02)
   );
   background-size: 100% 3px, 6px 100%;
-  pointer-events: none;
+  pointer-events: none !important;
 }
 
 /* Holographic Glows */

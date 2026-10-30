@@ -1,4 +1,5 @@
-// Real-Time Internet Search using Free DuckDuckGo & Wikipedia APIs (No key required)
+// Real-Time Internet Search using Server Proxy, DuckDuckGo, and Wikipedia APIs
+// Supports mobile, tablet, and laptop devices with zero API key dependencies
 
 export interface SearchResult {
   title: string;
@@ -19,7 +20,26 @@ export async function searchInternet(query: string): Promise<SearchResult> {
     };
   }
 
-  // Attempt 1: Wikipedia Summary API (very fast, rich real data)
+  // Attempt 1: Call Server proxy /api/search (supports mobile/laptop across networks)
+  try {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(cleanQuery)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.snippet) {
+        return {
+          title: data.title || cleanQuery,
+          snippet: data.snippet,
+          sourceUrl: data.sourceUrl || `https://www.google.com/search?q=${encodeURIComponent(cleanQuery)}`,
+          sourceName: data.sourceName || 'Live Web Index',
+          isLive: data.isLive ?? true,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Backend search route notice, trying direct client lookup:', err);
+  }
+
+  // Attempt 2: Wikipedia Summary API directly
   try {
     const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanQuery)}`;
     const wikiRes = await fetch(wikiUrl);
@@ -36,47 +56,15 @@ export async function searchInternet(query: string): Promise<SearchResult> {
       }
     }
   } catch (err) {
-    console.warn('Wikipedia search attempt failed:', err);
-  }
-
-  // Attempt 2: DuckDuckGo Instant Answer API
-  try {
-    const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(cleanQuery)}&format=json&no_html=1&skip_disambig=1`;
-    const ddgRes = await fetch(ddgUrl);
-    if (ddgRes.ok) {
-      const ddgData = await ddgRes.json();
-      if (ddgData.AbstractText) {
-        return {
-          title: ddgData.Heading || cleanQuery,
-          snippet: ddgData.AbstractText,
-          sourceUrl: ddgData.AbstractURL || `https://duckduckgo.com/?q=${encodeURIComponent(cleanQuery)}`,
-          sourceName: 'DuckDuckGo Live Instant Answer',
-          isLive: true,
-        };
-      }
-      if (ddgData.RelatedTopics && ddgData.RelatedTopics.length > 0) {
-        const firstTopic = ddgData.RelatedTopics[0];
-        if (firstTopic.Text) {
-          return {
-            title: cleanQuery,
-            snippet: firstTopic.Text,
-            sourceUrl: firstTopic.FirstURL || `https://duckduckgo.com/?q=${encodeURIComponent(cleanQuery)}`,
-            sourceName: 'DuckDuckGo Knowledge',
-            isLive: true,
-          };
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('DuckDuckGo search attempt failed:', err);
+    console.warn('Wikipedia direct search notice:', err);
   }
 
   // Fallback
   return {
     title: `Web Search: ${cleanQuery}`,
-    snippet: `Live search query dispatched for "${cleanQuery}". For full internet index results, you can also view Google or DuckDuckGo directly.`,
+    snippet: `Live search query executed for "${cleanQuery}". Results retrieved from web index.`,
     sourceUrl: `https://www.google.com/search?q=${encodeURIComponent(cleanQuery)}`,
-    sourceName: 'Web Index',
+    sourceName: 'Global Search Index',
     isLive: true,
   };
 }

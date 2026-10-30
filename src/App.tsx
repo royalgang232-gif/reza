@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AssistantSettings, Message, SupportedLanguage } from './types';
 import { HeaderHUD } from './components/HeaderHUD';
 import { ArcReactor } from './components/ArcReactor';
+import { BatteryTelemetry } from './components/BatteryTelemetry';
 import { QuickActions } from './components/QuickActions';
 import { ChatPanel } from './components/ChatPanel';
 import { VoiceController } from './components/VoiceController';
@@ -13,13 +14,14 @@ import { DictationModal } from './components/DictationModal';
 import { FileManagerModal } from './components/FileManagerModal';
 import { PythonSuiteModal } from './components/PythonSuiteModal';
 import { SettingsModal } from './components/SettingsModal';
+import { InternetSearchModal } from './components/InternetSearchModal';
 
 import { aiService } from './services/aiService';
 import { speechService } from './services/speechService';
 import { soundEffects } from './services/soundEffects';
 import { fetchLiveWeather } from './services/weatherService';
 import { searchInternet } from './services/searchService';
-import { systemService } from './services/systemService';
+import { backgroundManager } from './services/backgroundManager';
 
 const DEFAULT_SETTINGS: AssistantSettings = {
   language: 'en',
@@ -48,6 +50,9 @@ export default function App() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [cpuUsage, setCpuUsage] = useState(24);
+  const [backgroundActive, setBackgroundActive] = useState<boolean>(() => {
+    return localStorage.getItem('reza_bg_active') === 'true';
+  });
 
   // Messages log
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -61,7 +66,7 @@ export default function App() {
       {
         id: 'init-1',
         sender: 'reza',
-        text: "REZA Core AI Online. Iron Man-inspired desktop automation, meteorological telemetry, system diagnostics, and multilingual speech intelligence ready. Available in English, Hindi (हिन्दी), and Nepali (नेपाली).",
+        text: "REZA Core AI Online. Iron Man-inspired desktop & mobile command station ready. Background assistance mode and live global web search enabled. Available in English, Hindi (हिन्दी), and Nepali (नेपाली).",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         type: 'text',
       },
@@ -107,6 +112,43 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Background assistance initialization
+  useEffect(() => {
+    if (backgroundActive) {
+      backgroundManager.startAudioKeepAlive();
+      backgroundManager.requestWakeLock();
+    }
+  }, [backgroundActive]);
+
+  const toggleBackgroundMode = async () => {
+    soundEffects.playConfirmation();
+    if (backgroundActive) {
+      backgroundManager.stopAudioKeepAlive();
+      setBackgroundActive(false);
+      localStorage.setItem('reza_bg_active', 'false');
+      addMessage({
+        sender: 'reza',
+        text: 'Background assistance deactivated. Standard foreground mode restored.',
+        type: 'text',
+      });
+    } else {
+      backgroundManager.startAudioKeepAlive();
+      await backgroundManager.requestWakeLock();
+      await backgroundManager.requestNotificationPermission();
+      setBackgroundActive(true);
+      localStorage.setItem('reza_bg_active', 'true');
+      backgroundManager.sendNotification(
+        'REZA Assistant Online',
+        'Running in background. Ready to assist with search, tasks, and voice commands.'
+      );
+      addMessage({
+        sender: 'reza',
+        text: 'Background assistance engaged! Screen WakeLock and audio keepalive activated. REZA will remain alert even while using other apps or in the background.',
+        type: 'text',
+      });
+    }
+  };
+
   const addMessage = (msg: Omit<Message, 'id' | 'timestamp'>): Message => {
     const newMsg: Message = {
       ...msg,
@@ -114,6 +156,12 @@ export default function App() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     setMessages((prev) => [...prev, newMsg]);
+
+    // Send notification if app is in background or hidden
+    if (document.visibilityState === 'hidden' && backgroundActive && msg.sender === 'reza') {
+      backgroundManager.sendNotification('REZA Assistant', msg.text.slice(0, 120));
+    }
+
     return newMsg;
   };
 
@@ -133,6 +181,36 @@ export default function App() {
     soundEffects.playProcessingPulse();
 
     try {
+      const textLower = text.toLowerCase();
+
+      // Background mode toggle command
+      if (textLower.includes('background') || textLower.includes('ब्याकग्राउन्ड') || textLower.includes('बैकग्राउंड')) {
+        toggleBackgroundMode();
+        return;
+      }
+
+      // Live Internet search command
+      if (
+        textLower.startsWith('search') ||
+        textLower.includes('search for') ||
+        textLower.includes('google') ||
+        textLower.includes('खोज्नुहोस्') ||
+        textLower.includes('खोजिए')
+      ) {
+        const query = textLower
+          .replace(/^(reza,?\s*)?(search\s+(for\s+)?|google\s+|खोज्नुहोस्\s*|खोजिए\s*)/i, '')
+          .trim();
+        const searchRes = await searchInternet(query || text);
+        const replyMsg = addMessage({
+          sender: 'reza',
+          text: `[${searchRes.sourceName.toUpperCase()}]\n${searchRes.snippet}`,
+          type: 'text',
+          isLiveInfo: searchRes.isLive,
+        });
+        speakAndSetState(replyMsg.text);
+        return;
+      }
+
       const response = await aiService.generateReply(text, settings.language);
 
       // Check detected actions
@@ -148,19 +226,6 @@ export default function App() {
             type: 'weather',
             weatherData: weather,
             isLiveInfo: weather.isLive,
-          });
-          speakAndSetState(replyMsg.text);
-          return;
-        }
-
-        if (act.type === 'search') {
-          const query = act.param || text;
-          const searchRes = await searchInternet(query);
-          const replyMsg = addMessage({
-            sender: 'reza',
-            text: `[${searchRes.sourceName.toUpperCase()}]\n${searchRes.snippet}`,
-            type: 'text',
-            isLiveInfo: searchRes.isLive,
           });
           speakAndSetState(replyMsg.text);
           return;
@@ -211,7 +276,7 @@ export default function App() {
         }
       }
 
-      // Standard / Code / Joke response
+      // Standard response
       const replyMsg = addMessage({
         sender: 'reza',
         text: response.text,
@@ -321,8 +386,11 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#04070d] text-[#c5d8ea] overflow-hidden select-none relative scanlines">
-      {/* 1. Header HUD with World Clocks, Status, and Language */}
+    <div className="flex flex-col h-screen w-screen bg-[#04070d] text-[#c5d8ea] overflow-hidden relative pointer-events-auto">
+      {/* Decorative scanline overlay safely isolated as pointer-events-none layer */}
+      <div className="fixed inset-0 pointer-events-none scanlines-overlay z-40 opacity-35" />
+
+      {/* 1. Header HUD with World Clocks, Status, Background toggle, and Language */}
       <HeaderHUD
         currentLanguage={settings.language}
         onLanguageChange={handleLanguageChange}
@@ -331,15 +399,14 @@ export default function App() {
           setSettings((prev) => ({ ...prev, soundEffects: !prev.soundEffects }))
         }
         cpuUsage={cpuUsage}
+        backgroundActive={backgroundActive}
+        onToggleBackground={toggleBackgroundMode}
       />
 
       {/* 2. Quick Actions Toolbar */}
       <QuickActions
         onOpenWeather={() => setActiveModal('weather')}
-        onOpenSearch={() => {
-          const q = prompt('Enter web search term:');
-          if (q) handleSendCommand(`search ${q}`);
-        }}
+        onOpenSearch={() => setActiveModal('search')}
         onOpenSystem={() => setActiveModal('system')}
         onOpenScreen={() => setActiveModal('screen')}
         onOpenDictation={() => setActiveModal('dictation')}
@@ -350,33 +417,44 @@ export default function App() {
         activeModal={activeModal}
       />
 
-      {/* 3. Center Command Area: Arc Reactor + Live Chat Stream */}
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-        {/* Left Side: Arc Reactor & Telemetry Visualizer */}
-        <div className="w-full md:w-80 bg-[#060c18]/70 border-b md:border-b-0 md:border-r border-cyan-950 flex flex-col items-center justify-between p-4 flex-shrink-0">
-          <div className="w-full flex justify-between items-center text-[10px] font-mono text-cyan-500/80 px-2">
+      {/* 3. Center Command Area: Arc Reactor + Telemetry Sidebar + Live Chat Stream */}
+      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative z-10">
+        {/* Left Side: Arc Reactor & Real-Time Battery/System Telemetry */}
+        <div className="w-full md:w-80 bg-[#060c18]/90 border-b md:border-b-0 md:border-r border-cyan-950 flex flex-col items-center justify-start p-3 sm:p-4 overflow-y-auto space-y-3.5 flex-shrink-0">
+          <div className="w-full flex justify-between items-center text-[10px] font-mono text-cyan-500/80 px-1">
             <span>NEURAL MATRIX: 100%</span>
             <span>FREQ: 432.8 MHz</span>
           </div>
 
-          <div className="py-2">
+          {/* Central Arc Reactor */}
+          <div className="py-1">
             <ArcReactor status={status} onClick={handleToggleListen} />
           </div>
 
-          <div className="w-full p-2.5 rounded-lg bg-[#040812] border border-cyan-950 text-[11px] font-mono text-cyan-400 space-y-1">
-            <div className="flex justify-between">
+          {/* Live System Battery Percentage Monitor using Browser Battery Status API */}
+          <BatteryTelemetry />
+
+          {/* Core System Status Card */}
+          <div className="w-full p-2.5 rounded-lg bg-[#040812] border border-cyan-950 text-[11px] font-mono text-cyan-400 space-y-1.5">
+            <div className="flex justify-between items-center">
               <span className="text-slate-500">VOICE ENGINE:</span>
               <span className="text-cyan-300 font-bold">{settings.language.toUpperCase()} / TTS ACTIVE</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-slate-500">MICROPHONE:</span>
               <span className={isListening ? 'text-rose-400 font-bold animate-pulse' : 'text-slate-400'}>
-                {isListening ? 'RECORDING' : 'STANDBY'}
+                {isListening ? '● RECORDING' : '○ STANDBY'}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">AUTOMATION:</span>
-              <span className="text-emerald-400 font-bold">READY (AUTHORIZED)</span>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-500">BACKGROUND ASSIST:</span>
+              <span className={backgroundActive ? 'text-emerald-400 font-bold' : 'text-slate-500'}>
+                {backgroundActive ? 'RUNNING (PERSISTENT)' : 'STANDBY'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-500">GLOBAL SEARCH:</span>
+              <span className="text-cyan-400">MOBILE / LAPTOP READY</span>
             </div>
           </div>
         </div>
@@ -408,6 +486,13 @@ export default function App() {
       />
 
       {/* 5. Modals for Deep Functionalities */}
+      <InternetSearchModal
+        isOpen={activeModal === 'search'}
+        onClose={() => setActiveModal(null)}
+        onSelectResultAsPrompt={(p) => handleSendCommand(p)}
+        onSpeakText={(txt) => speakAndSetState(txt)}
+      />
+
       <WeatherModal
         isOpen={activeModal === 'weather'}
         onClose={() => setActiveModal(null)}

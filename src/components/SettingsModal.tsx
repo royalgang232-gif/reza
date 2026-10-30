@@ -192,21 +192,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
 
-          {/* Optional Free Gemini API Key */}
-          <div className="space-y-1.5">
-            <label className="text-slate-400 text-[11px] flex items-center gap-1">
-              <Key className="w-3.5 h-3.5 text-cyan-500" /> OPTIONAL: GOOGLE GEMINI API KEY (100% Free Tier Supported)
-            </label>
-            <input
-              type="password"
-              value={settings.customApiKey}
-              onChange={(e) => onUpdateSettings({ customApiKey: e.target.value })}
-              placeholder="Paste free Gemini API key (optional — REZA works without any key)..."
-              className="w-full bg-[#050c18] border border-cyan-900 rounded p-2 text-cyan-200 focus:outline-none"
-            />
-            <p className="text-[10px] text-slate-500">
-              Note: REZA already includes full built-in multilingual intelligence, weather, internet search, and desktop automation completely free without any API key required!
-            </p>
+          {/* Server-Side AI Intelligence Status */}
+          <div className="p-4 rounded-xl bg-[#050c18] border border-cyan-950 space-y-2">
+            <div className="text-cyan-400 font-bold flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400" /> REZA SERVER-SIDE AI INTEGRATION:
+            </div>
+            <div className="text-[11px] text-slate-400 leading-relaxed">
+              Gemini AI models (<span className="text-cyan-300 font-bold">gemini-3.8-flash</span> & <span className="text-cyan-300 font-bold">gemini-3.8-live</span>) execute securely via the backend proxy server.
+            </div>
+            <div className="flex items-center space-x-2 text-[10px] text-emerald-400 font-bold pt-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>SERVER GATEWAY: ACTIVE (NO CLIENT KEY REQUIRED)</span>
+            </div>
           </div>
         </div>
       </div>
