@@ -1,0 +1,10 @@
+{
+  "name": "REZA — JARVIS AI Assistant",
+  "description": "Futuristic desktop AI assistant inspired by JARVIS with multilingual voice interaction (Nepali, Hindi, English), system automation, screen vision intelligence, and Python automation suite.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "display-capture"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
